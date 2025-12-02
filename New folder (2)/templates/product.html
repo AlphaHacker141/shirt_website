@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-12">
+    <div class="grid md:grid-cols-2 gap-12">
+        <!-- Product Image -->
+        <div class="rounded-2xl overflow-hidden bg-gray-800">
+            <img src="{{ url_for('static', filename='uploads/' + product.image_filename) }}" alt="{{ product.name }}"
+                class="w-full h-full object-cover">
+        </div>
+
+        <!-- Product Details -->
+        <div class="flex flex-col justify-center">
+            <span class="text-purple-500 font-bold tracking-wider uppercase mb-2">{{ product.category }}</span>
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-4">{{ product.name }}</h1>
+            <p class="text-3xl font-bold text-white mb-6">₹{{ "%.0f"|format(product.price) }}</p>
+
+            <p class="text-gray-400 mb-8 leading-relaxed">{{ product.description }}</p>
+
+            <!-- Size Selector -->
+            <div class="mb-8">
+                <label class="block text-sm font-medium text-gray-300 mb-3">Select Size</label>
+                <div class="flex space-x-4" id="size-selector">
+                    {% for size in ['S', 'M', 'L', 'XL', 'XXL'] %}
+                    <button type="button" onclick="selectSize(this, '{{ size }}')"
+                        class="size-btn w-12 h-12 rounded-lg border border-gray-600 flex items-center justify-center hover:border-purple-500 hover:text-purple-500 transition focus:outline-none">
+                        {{ size }}
+                    </button>
+                    {% endfor %}
+                </div>
+                <input type="hidden" id="selected-size" value="">
+                <p id="size-error" class="text-red-500 text-sm mt-2 hidden">Please select a size</p>
+            </div>
+
+            <!-- Quantity -->
+            <div class="mb-8 w-32">
+                <label class="block text-sm font-medium text-gray-300 mb-3">Quantity</label>
+                <div class="flex items-center border border-gray-600 rounded-lg">
+                    <button onclick="updateQty(-1)" class="px-3 py-2 hover:bg-gray-800 transition">-</button>
+                    <input type="number" id="quantity" value="1" min="1"
+                        class="w-full bg-transparent text-center focus:outline-none" readonly>
+                    <button onclick="updateQty(1)" class="px-3 py-2 hover:bg-gray-800 transition">+</button>
+                </div>
+            </div>
+
+            <!-- Order Button -->
+            <button onclick="openOrderModal()"
+                class="w-full bg-green-500 text-white font-bold py-4 rounded-xl hover:bg-green-600 transition flex items-center justify-center gap-2 text-lg">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path
+                        d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
+                </svg>
+                Order on WhatsApp
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Order Modal -->
+<div id="orderModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-md w-full relative">
+        <button onclick="closeOrderModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+
+        <h3 class="text-2xl font-bold mb-4">Complete Your Order</h3>
+        <p class="text-gray-400 mb-6 text-sm">Enter your details to generate the WhatsApp order message.</p>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Your Name</label>
+                <input type="text" id="customerName"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-500 focus:outline-none"
+                    placeholder="John Doe">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Delivery Address</label>
+                <textarea id="customerAddress" rows="3"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-purple-500 focus:outline-none"
+                    placeholder="Full address with pincode"></textarea>
+            </div>
+            <button onclick="sendToWhatsApp()"
+                class="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition">
+                Proceed to WhatsApp
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let selectedSize = '';
+
+    function selectSize(btn, size) {
+        // Reset all buttons
+        document.querySelectorAll('.size-btn').forEach(b => {
+            b.classList.remove('bg-purple-600', 'text-white', 'border-purple-600');
+            b.classList.add('border-gray-600');
+        });
+
+        // Activate clicked button
+        btn.classList.remove('border-gray-600');
+        btn.classList.add('bg-purple-600', 'text-white', 'border-purple-600');
+
+        selectedSize = size;
+        document.getElementById('selected-size').value = size;
+        document.getElementById('size-error').classList.add('hidden');
+    }
+
+    function updateQty(change) {
+        const input = document.getElementById('quantity');
+        let val = parseInt(input.value) + change;
+        if (val < 1) val = 1;
+        input.value = val;
+    }
+
+    function openOrderModal() {
+        if (!selectedSize) {
+            document.getElementById('size-error').classList.remove('hidden');
+            return;
+        }
+        document.getElementById('orderModal').classList.remove('hidden');
+        document.getElementById('orderModal').classList.add('flex');
+    }
+
+    function closeOrderModal() {
+        document.getElementById('orderModal').classList.add('hidden');
+        document.getElementById('orderModal').classList.remove('flex');
+    }
+
+    function sendToWhatsApp() {
+        const name = document.getElementById('customerName').value;
+        const address = document.getElementById('customerAddress').value;
+
+        if (!name || !address) {
+            alert('Please fill in all details');
+            return;
+        }
+
+        const productName = "{{ product.name }}";
+        const quantity = document.getElementById('quantity').value;
+
+        const message = `Hello, I want to order:%0A` +
+            `Shirt Name: ${productName}%0A` +
+            `Size: ${selectedSize}%0A` +
+            `Quantity: ${quantity}%0A` +
+            `My Name: ${name}%0A` +
+            `Delivery Address: ${address}`;
+
+        const url = `https://wa.me/918767033469?text=${message}`;
+        window.open(url, '_blank');
+        closeOrderModal();
+    }
+</script>
+{% endblock %}
